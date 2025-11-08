@@ -1,0 +1,206 @@
+variant: fcos
+version: 1.6.0
+
+passwd:
+  users:
+    - name: liam
+      groups:
+        - wheel
+      ssh_authorized_keys_local:
+        - keys/liam_id_ecdsa.pub
+      password_hash: $y$j9T$K1KciNquf8WPDbWDEqRLq/$cQzeYmWKFOoV3cfZIDb6TZTaDYSECJD2gvGLiKeSv02
+    - name: syncoid
+      ssh_authorized_keys_local:
+        - keys/sync_id_ed25519.pub
+    - name: power
+      ssh_authorized_keys_local:
+        - keys/power_id_ed25519.pub
+
+storage:
+  directories:
+    - path: /etc/ucore-autorebase
+      mode: 0754
+
+    # create systemd directory structure for liam
+    - path: /var/home/liam/.config
+      mode: 0755
+      user:
+        name: liam
+      group:
+        name: liam
+    - path: /var/home/liam/.config/systemd
+      mode: 0755
+      user:
+        name: liam
+      group:
+        name: liam
+    - path: /var/home/liam/.config/systemd/user
+      mode: 0755
+      user:
+        name: liam
+      group:
+        name: liam
+    - path: /var/home/liam/.config/systemd/user/default.target.wants
+      mode: 0755
+      user:
+        name: liam
+      group:
+        name: liam
+
+    # create directory structure for containers auth file
+    - path: /var/home/liam/.config/containers
+      mode: 0700
+      user:
+        name: liam
+      group:
+        name: liam
+
+  files:
+    # set hostname to BUSCH
+    - path: /etc/hostname
+      mode: 0644
+      contents:
+        inline: |
+          BUSCH
+    
+    # insert container registry credentials
+    - path: /var/home/liam/.config/containers/auth.json
+      mode: 0600
+      contents:
+        local: files/auth.json
+      user:
+        name: liam
+      group:
+        name: liam
+
+    # enable power user to use poweroff, reboot, and shutdown without password
+    - path: /etc/sudoers.d/power
+      mode: 0440
+      contents:
+        inline: |
+          power ALL=NOPASSWD: /usr/bin/poweroff, /usr/bin/reboot, /usr/bin/shutdown
+
+    # enable zfs kmod (won't work until after secureboot enrollment)
+    - path: /etc/modules-load.d/zfs.conf
+      mode: 0644
+      contents:
+        inline: |
+          zfs
+
+    # add a prompt to enroll the secureboot key on login
+    - path: /etc/profile.d/enroll-secureboot.sh
+      mode: 0644
+      contents:
+        local: files/enroll-secureboot.sh
+
+    # auto start podman for liam
+    - path: /var/lib/systemd/linger/liam
+      mode: 0644
+    - path: /var/lib/systemd/podman-restart/liam
+      mode: 0644
+    - path: /var/home/liam/.config/systemd/user/podman-restart.service
+      mode: 0644
+      contents:
+        inline: |
+          [Unit]
+          Description=Podman Start All Containers With Restart Policy Set To Always
+          Documentation=man:podman-start(1)
+          StartLimitIntervalSec=0
+          Wants=network-online.target
+          After=network-online.target
+          [Service]
+          Type=oneshot
+          RemainAfterExit=true
+          Environment=LOGGING="--log-level=info"
+          ExecStart=/usr/bin/podman $LOGGING start --all --filter restart-policy=always
+          ExecStop=/usr/bin/podman  $LOGGING stop  --all --filter restart-policy=always
+          [Install]
+          WantedBy=default.target
+      user:
+        name: liam
+      group:
+        name: liam
+
+  links:
+    # configure the localtime to America/Chicago
+    - path: /etc/localtime
+      target: ../usr/share/zoneinfo/America/Chicago
+
+    # enable podman-restart service for liam
+    - path: /var/home/liam/.config/systemd/user/default.target.wants/podman-restart.service
+      user:
+        name: liam
+      group:
+        name: liam
+      target: /var/home/liam/.config/systemd/user/podman-restart.service
+      hard: false
+
+systemd:
+  units:
+    # two step ucore rebase process, reboots after each step
+    - name: ucore-unsigned-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=uCore autorebase to unsigned OCI and reboot
+        ConditionPathExists=!/etc/ucore-autorebase/unverified
+        ConditionPathExists=!/etc/ucore-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
+        ExecStart=/usr/bin/touch /etc/ucore-autorebase/unverified
+        ExecStart=/usr/bin/systemctl disable ucore-unsigned-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
+    - name: ucore-signed-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=uCore autorebase to signed OCI and reboot
+        ConditionPathExists=/etc/ucore-autorebase/unverified
+        ConditionPathExists=!/etc/ucore-autorebase/signed
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ublue-os/ucore:stable
+        ExecStart=/usr/bin/touch /etc/ucore-autorebase/signed
+        ExecStart=/usr/bin/systemctl disable ucore-signed-autorebase.service
+        ExecStart=/usr/bin/systemctl reboot
+        [Install]
+        WantedBy=multi-user.target
+
+    # clone busch-config repo into home directory if it doesn't exist
+    - name: config.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=clone the container configs
+        ConditionPathExists=!/var/home/liam/busch-config
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        User=liam
+        Type=oneshot
+        StandardOutput=journal+console
+        WorkingDirectory=/var/home/liam
+        ExecStart=/usr/bin/git clone --recursive https://github.com/fruzyna/busch-config
+        [Install]
+        WantedBy=multi-user.target
+    
+    # disable zincati disabled motd warning
+    - name: coreos-container-signing-migration-motd.service
+      enabled: false
+
+    # disable firewalld
+    - name: dbus-org.fedoraproject.FirewallD1.service
+      enabled: false
+      mask: true
+    - name: firewalld.service
+      enabled: false
+      mask: true
