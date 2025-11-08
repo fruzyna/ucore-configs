@@ -21,34 +21,14 @@ storage:
     - path: /etc/ucore-autorebase
       mode: 0754
 
-    # create systemd directory structure for liam
-    - path: /var/home/liam/.config
-      mode: 0755
-      user:
-        name: liam
-      group:
-        name: liam
-    - path: /var/home/liam/.config/systemd
-      mode: 0755
-      user:
-        name: liam
-      group:
-        name: liam
-    - path: /var/home/liam/.config/systemd/user
-      mode: 0755
-      user:
-        name: liam
-      group:
-        name: liam
-    - path: /var/home/liam/.config/systemd/user/default.target.wants
-      mode: 0755
-      user:
-        name: liam
-      group:
-        name: liam
-
     # create directory structure for containers auth file
-    - path: /var/home/liam/.config/containers
+    - path: /var/roothome/.config
+      mode: 0755
+      user:
+        name: liam
+      group:
+        name: liam
+    - path: /var/roothome/.config/containers
       mode: 0700
       user:
         name: liam
@@ -64,7 +44,7 @@ storage:
           BUSCH
     
     # insert container registry credentials
-    - path: /var/home/liam/.config/containers/auth.json
+    - path: /var/roothome/.config/containers/auth.json
       mode: 0600
       contents:
         local: files/auth.json
@@ -87,60 +67,16 @@ storage:
         inline: |
           zfs
 
-    # allow unprivileged access to port 80 and up
-    - path: /etc/sysctl.d/01-unprivileged-ports.conf
-      mode: 0777
-      contents:
-        inline: |
-          net.ipv4.ip_unprivileged_port_start=80
-
     # add a prompt to enroll the secureboot key on login
     - path: /etc/profile.d/enroll-secureboot.sh
       mode: 0644
       contents:
         local: files/enroll-secureboot.sh
 
-    # auto start podman for liam
-    - path: /var/lib/systemd/linger/liam
-      mode: 0644
-    - path: /var/lib/systemd/podman-restart/liam
-      mode: 0644
-    - path: /var/home/liam/.config/systemd/user/podman-restart.service
-      mode: 0644
-      contents:
-        inline: |
-          [Unit]
-          Description=Podman Start All Containers With Restart Policy Set To Always
-          Documentation=man:podman-start(1)
-          StartLimitIntervalSec=0
-          Wants=network-online.target
-          After=network-online.target
-          [Service]
-          Type=oneshot
-          RemainAfterExit=true
-          Environment=LOGGING="--log-level=info"
-          ExecStart=/usr/bin/podman $LOGGING start --all --filter restart-policy=always
-          ExecStop=/usr/bin/podman  $LOGGING stop  --all --filter restart-policy=always
-          [Install]
-          WantedBy=default.target
-      user:
-        name: liam
-      group:
-        name: liam
-
   links:
     # configure the localtime to America/Chicago
     - path: /etc/localtime
       target: ../usr/share/zoneinfo/America/Chicago
-
-    # enable podman-restart service for liam
-    - path: /var/home/liam/.config/systemd/user/default.target.wants/podman-restart.service
-      user:
-        name: liam
-      group:
-        name: liam
-      target: /var/home/liam/.config/systemd/user/podman-restart.service
-      hard: false
 
 systemd:
   units:
@@ -181,24 +117,6 @@ systemd:
         ExecStart=/usr/bin/systemctl reboot
         [Install]
         WantedBy=multi-user.target
-
-    # clone busch-config repo into home directory if it doesn't exist
-    - name: config.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=clone the container configs
-        ConditionPathExists=!/var/home/liam/busch-config
-        After=network-online.target
-        Wants=network-online.target
-        [Service]
-        User=liam
-        Type=oneshot
-        StandardOutput=journal+console
-        WorkingDirectory=/var/home/liam
-        ExecStart=/usr/bin/git clone --recursive https://github.com/fruzyna/busch-config
-        [Install]
-        WantedBy=multi-user.target
     
     # disable zincati disabled motd warning
     - name: coreos-container-signing-migration-motd.service
@@ -211,3 +129,7 @@ systemd:
     - name: firewalld.service
       enabled: false
       mask: true
+
+    # enable podman autostart
+    - name: podman-restart.service
+      enabled: true
