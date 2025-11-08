@@ -87,6 +87,13 @@ storage:
         inline: |
           zfs
 
+    # allow unprivileged access to port 80 and up
+    - path: /etc/sysctl.d/01-unprivileged-ports.conf
+      mode: 0777
+      contents:
+        inline: |
+          net.ipv4.ip_unprivileged_port_start=80
+
     # add a prompt to enroll the secureboot key on login
     - path: /etc/profile.d/enroll-secureboot.sh
       mode: 0644
