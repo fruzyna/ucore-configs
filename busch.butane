@@ -15,6 +15,9 @@ passwd:
     - name: power
       ssh_authorized_keys_local:
         - keys/power_id_ed25519.pub
+    - name: ellen
+      no_create_home: true
+      shell: /usr/sbin/nologin
 
 storage:
   directories:
