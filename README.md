@@ -1,6 +1,6 @@
-# BUSCH uCore Config
+# uCore Configs
 
-These are the files I use to install uCore to my web server "BUSCH".
+These are the files I use to install uCore to my various servers.
 
 ## Installation
 
@@ -10,7 +10,7 @@ These are the files I use to install uCore to my web server "BUSCH".
   - `serve.sh [server]`
 3. Boot live CoreOS image
 4. Start install from the generated ignition file
-  - `sudo coreos-installer install /dev/nvme0n1 --insecure-ignition --ignition-url http://192.168.16.21:8000/[server].ign`
+  - `sudo coreos-installer install /dev/nvme0n1 --insecure-ignition --ignition-url http://[host-ip]:8000/[server].ign`
 5. Reboot, then wait for it to automatically reboot 2 additional times
 6. On first login it will walk you through enrolling the key for secureboot
 
