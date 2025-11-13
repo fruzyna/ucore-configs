@@ -8,6 +8,7 @@ passwd:
         - wheel
       ssh_authorized_keys_local:
         - keys/liam_id_ecdsa.pub
+        - keys/backup_id_ed25519.pub
       password_hash: $y$j9T$K1KciNquf8WPDbWDEqRLq/$cQzeYmWKFOoV3cfZIDb6TZTaDYSECJD2gvGLiKeSv02
     - name: syncoid
       ssh_authorized_keys_local:
