@@ -1,0 +1,9 @@
+[Init]
+Description=Backup sloan from BUSCH daily at 3:30
+
+[Timer]
+OnCalendar=*-*-* 3:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

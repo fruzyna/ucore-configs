@@ -1,0 +1,4 @@
+[Service]
+Type=oneshot
+ExecStart=syncoid --no-privilege-elevation --sshkey=/home/liam/.ssh/syncoid_id_ed25519 liam@192.168.8.3:lakefront/home-config weeghman/backup/home-config
+ExecStart=syncoid --no-privilege-elevation --sshkey=/home/liam/.ssh/syncoid_id_ed25519 liam@192.168.8.3:lakefront/mom weeghman/backup/mom

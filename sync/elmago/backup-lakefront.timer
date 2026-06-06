@@ -1,0 +1,9 @@
+[Init]
+Description=Backup lakefront from BENNY on Thursdays at 4
+
+[Timer]
+OnCalendar=Thu *-*-* 4:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

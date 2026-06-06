@@ -51,12 +51,12 @@ storage:
         name: liam
 
   files:
-    # set hostname to BUSCH
+    # set hostname to BENNY
     - path: /etc/hostname
       mode: 0644
       contents:
         inline: |
-          BUSCH
+          BENNY
 
     # enable power user to use poweroff, reboot, and shutdown without password
     - path: /etc/sudoers.d/power
@@ -89,6 +89,40 @@ storage:
       contents:
         local: config/elmago/sanoid.conf
 
+    # add sync services and timers
+    - path: /etc/systemd/user/backup-ghomenas.timer
+      mode: 0644
+      contents:
+        local: sync/benny/backup-ghomenas.timer
+    - path: /etc/systemd/user/backup-ghomenas.service
+      mode: 0644
+      contents:
+        local: sync/benny/backup-ghomenas.service
+    - path: /etc/systemd/user/backup-weeghman.timer
+      mode: 0644
+      contents:
+        local: sync/benny/backup-weeghman.timer
+    - path: /etc/systemd/user/backup-weeghman.service
+      mode: 0644
+      contents:
+        local: sync/benny/backup-weeghman.service
+    - path: /etc/systemd/user/backup-sloan.timer
+      mode: 0644
+      contents:
+        local: sync/benny/backup-sloan.timer
+    - path: /etc/systemd/user/backup-sloan.service
+      mode: 0644
+      contents:
+        local: sync/benny/backup-sloan.service
+    - path: /etc/systemd/user/backup-wrigley.timer
+      mode: 0644
+      contents:
+        local: sync/benny/backup-wrigley.timer
+    - path: /etc/systemd/user/backup-wrigley.service
+      mode: 0644
+      contents:
+        local: sync/benny/backup-wrigley.service
+
   links:
     # configure the localtime to America/Chicago
     - path: /etc/localtime
@@ -101,6 +135,36 @@ storage:
       group:
         name: liam
       target: /usr/lib/systemd/user/podman-restart.service
+      hard: false
+
+    # enable backups
+    - path: /home/liam/.config/systemd/user/default.target.wants/backup-ghomenas.timer
+      user:
+        name: liam
+      group:
+        name: liam
+      target: /etc/systemd/user/backup-ghomenas.timer
+      hard: false
+    - path: /home/liam/.config/systemd/user/default.target.wants/backup-weeghman.timer
+      user:
+        name: liam
+      group:
+        name: liam
+      target: /etc/systemd/user/backup-weeghman.timer
+      hard: false
+    - path: /home/liam/.config/systemd/user/default.target.wants/backup-sloan.timer
+      user:
+        name: liam
+      group:
+        name: liam
+      target: /etc/systemd/user/backup-sloan.timer
+      hard: false
+    - path: /home/liam/.config/systemd/user/default.target.wants/backup-wrigley.timer
+      user:
+        name: liam
+      group:
+        name: liam
+      target: /etc/systemd/user/backup-wrigley.timer
       hard: false
 
 systemd:

@@ -11,13 +11,16 @@ passwd:
       ssh_authorized_keys_local:
         - keys/liam_id_ecdsa.pub
         - keys/backup_id_ed25519.pub
-      password_hash: $y$j9T$K1KciNquf8WPDbWDEqRLq/$cQzeYmWKFOoV3cfZIDb6TZTaDYSECJD2gvGLiKeSv02
+      password_hash: $y$j9T$fOs/Fg7ItU93I9fBHyMAz.$VsTug3VRM3pjZZEoIKxaMio7EjUiR4wKQwPOjilbqZ9
     - name: syncoid
       ssh_authorized_keys_local:
         - keys/syncoid_id_ed25519.pub
     - name: power
       ssh_authorized_keys_local:
         - keys/power_id_ed25519.pub
+    - name: ellen
+      no_create_home: true
+      shell: /usr/sbin/nologin
 
 storage:
   directories:
@@ -51,12 +54,12 @@ storage:
         name: liam
 
   files:
-    # set hostname to BUSCH
+    # set hostname to ELMAGO
     - path: /etc/hostname
       mode: 0644
       contents:
         inline: |
-          BUSCH
+          ELMAGO
 
     # enable power user to use poweroff, reboot, and shutdown without password
     - path: /etc/sudoers.d/power
@@ -82,12 +85,45 @@ storage:
     - path: /var/lib/systemd/linger/liam
       mode: 0644
 
+    # configure smb
+    - path: /etc/samba/smb.conf
+      mode: 0644
+      overwrite: true
+      contents:
+        local: config/elmago/smb.conf
+
     # configure sanoid
     - path: /etc/sanoid/sanoid.conf
       mode: 0644
       overwrite: true
       contents:
         local: config/elmago/sanoid.conf
+
+    # add sync services and timers
+    - path: /etc/systemd/user/backup-lakefront.timer
+      mode: 0644
+      contents:
+        local: sync/elmago/backup-lakefront.timer
+    - path: /etc/systemd/user/backup-lakefront.service
+      mode: 0644
+      contents:
+        local: sync/elmago/backup-lakefront.service
+    - path: /etc/systemd/user/backup-sloan.timer
+      mode: 0644
+      contents:
+        local: sync/elmago/backup-sloan.timer
+    - path: /etc/systemd/user/backup-sloan.service
+      mode: 0644
+      contents:
+        local: sync/elmago/backup-sloan.service
+    - path: /etc/systemd/user/backup-wrigley.timer
+      mode: 0644
+      contents:
+        local: sync/elmago/backup-wrigley.timer
+    - path: /etc/systemd/user/backup-wrigley.service
+      mode: 0644
+      contents:
+        local: sync/elmago/backup-wrigley.service
 
   links:
     # configure the localtime to America/Chicago
@@ -101,6 +137,29 @@ storage:
       group:
         name: liam
       target: /usr/lib/systemd/user/podman-restart.service
+      hard: false
+
+    # enable backups
+    - path: /home/liam/.config/systemd/user/default.target.wants/backup-lakefront.timer
+      user:
+        name: liam
+      group:
+        name: liam
+      target: /etc/systemd/user/backup-lakefront.timer
+      hard: false
+    - path: /home/liam/.config/systemd/user/default.target.wants/backup-sloan.timer
+      user:
+        name: liam
+      group:
+        name: liam
+      target: /etc/systemd/user/backup-sloan.timer
+      hard: false
+    - path: /home/liam/.config/systemd/user/default.target.wants/backup-wrigley.timer
+      user:
+        name: liam
+      group:
+        name: liam
+      target: /etc/systemd/user/backup-wrigley.timer
       hard: false
 
 systemd:
@@ -118,7 +177,7 @@ systemd:
         [Service]
         Type=oneshot
         StandardOutput=journal+console
-        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable-nvidia
         ExecStart=/usr/bin/touch /etc/ucore-autorebase/unverified
         ExecStart=/usr/bin/systemctl disable ucore-unsigned-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
@@ -136,7 +195,8 @@ systemd:
         [Service]
         Type=oneshot
         StandardOutput=journal+console
-        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ublue-os/ucore:stable
+        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/ublue-os/ucore:stable-nvidia
+        ExecStart=nmcli c modify "Wired connection 1" 802-3-ethernet.wake-on-lan magic
         ExecStart=/usr/bin/touch /etc/ucore-autorebase/signed
         ExecStart=/usr/bin/systemctl disable ucore-signed-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
@@ -157,6 +217,10 @@ systemd:
 
     # enable podman autostart
     - name: podman-restart.service
+      enabled: true
+
+    # enable samba
+    - name: smb.service
       enabled: true
 
     # enable sanoid

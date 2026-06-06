@@ -9,6 +9,7 @@ These are the files I use to install uCore to my various servers.
 2. Generate an ignition file and host it on an http server
   - `serve.sh [server]`
 3. Boot live CoreOS image
+  - https://fedoraproject.org/coreos/download/?stream=stable
 4. Start install from the generated ignition file
   - `sudo coreos-installer install /dev/nvme0n1 --insecure-ignition --ignition-url http://[host-ip]:8000/[server].ign`
 5. Reboot, then wait for it to automatically reboot 2 additional times
